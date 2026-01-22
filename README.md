@@ -6,6 +6,7 @@ A dedicated web interface to browse a specific Artifactory repository with inlin
 
 ## Features
 
+### Core Features
 - 🌐 **Intuitive Web Interface** - Clean, modern UI for browsing repository contents
 - 📝 **Inline Markdown Viewing** - View .md files rendered directly in the browser
 - 🔗 **Smart Link Handling** - Click links within markdown files to navigate to referenced files and folders
@@ -14,12 +15,21 @@ A dedicated web interface to browse a specific Artifactory repository with inlin
   - Visual indicators for external vs internal links
   - See [LINK_HANDLING.md](LINK_HANDLING.md) for details
 - 📁 **Directory Navigation** - Easy folder navigation with breadcrumb trail
-- 🔍 **File Preview** - Preview various file types without downloading
 - ⬇️ **Quick Download** - Download files with a single click
 - 🔔 **Change Notifications** - Get browser notifications when files are added, modified, or removed (checks every 1 hour)
+  - See [NOTIFICATIONS.md](NOTIFICATIONS.md) for details
 - 🔴 **Visual Change Indicators** - See when changes are detected in the current directory
 - 🐛 **Debug Console** - Built-in developer console at the bottom of the page showing JavaScript errors, warnings, and technical details
+  - See [DEBUG_CONSOLE.md](DEBUG_CONSOLE.md) for details
 - 🎨 **Beautiful Design** - Modern, responsive interface
+
+### New Enhanced Features ⭐
+- 🔍 **File Search** - Instantly search for files by name across the current directory
+- 🔄 **Version Comparison** - Compare two files side-by-side with diff highlighting
+- 🌙 **Dark Mode** - Toggle between light and dark themes for comfortable viewing
+- 📜 **Navigation History** - Track recent files and path history with browser back/forward support
+
+📖 **[See detailed guide for new features →](NEW_FEATURES.md)**
 
 ## Installation
 
@@ -80,16 +90,37 @@ http://localhost:3000
    - Click on folders to navigate into them
    - Click on files to view their contents
    - Use breadcrumb navigation to go back
+   - Use browser back/forward buttons for navigation
    - Click download button to save files locally
 
-4. Enable change notifications (optional):
+4. Search for files:
+   - Use the search box in the file browser to filter files by name
+   - Results update in real-time as you type
+   - Click the X button to clear the search
+
+5. Compare files:
+   - Open a file and click the "🔄 Compare" button
+   - Select another file from the file list to compare
+   - View differences side-by-side with added/removed lines highlighted
+
+6. Use dark mode:
+   - Click the "🌙 Dark Mode" button in the header
+   - Toggle between light and dark themes
+   - Your preference is saved automatically
+
+7. View navigation history:
+   - Click the "📜 History" button in the header
+   - See your recently viewed files and visited paths
+   - Click any item to quickly navigate back to it
+
+8. Enable change notifications (optional):
    - Click the "🔔 Enable Notifications" button in the header
    - Allow browser notification permissions when prompted
    - You'll receive notifications every 1 hour when changes are detected
    - A visual indicator (🔴 Changes detected) will also appear in the file browser
    - Click the notification or refresh button to view the changes
 
-5. Use the debug console (for developers):
+9. Use the debug console (for developers):
    - Click the "🐛 Developer Console" bar at the bottom to expand/collapse
    - View JavaScript errors, warnings, and technical details
    - Errors are color-coded: red (errors), yellow (warnings), blue (info), green (success)

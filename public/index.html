@@ -16,6 +16,12 @@
                 <button id="notificationToggle" class="btn-notification" title="Enable change notifications">
                     🔔 Enable Notifications
                 </button>
+                <button id="themeToggle" class="btn-notification" title="Toggle dark mode">
+                    🌙 Dark Mode
+                </button>
+                <button id="historyToggle" class="btn-notification" title="Show navigation history">
+                    📜 History
+                </button>
                 <span id="notificationStatus" class="notification-status"></span>
             </div>
         </header>
@@ -37,6 +43,11 @@
                             <button id="refreshBtn" class="btn-refresh" title="Refresh">🔄</button>
                         </div>
                     </div>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search files...">
+                        <button id="clearSearch" class="btn-clear-search" style="display: none;">✖️</button>
+                    </div>
+                    <div id="searchResults" class="search-results" style="display: none;"></div>
                     <div id="loading" class="loading">Loading...</div>
                     <div id="error" class="error" style="display: none;"></div>
                     <ul id="fileList" class="file-list"></ul>
@@ -47,6 +58,7 @@
                     <div class="viewer-header">
                         <h2 id="viewerTitle">Content Viewer</h2>
                         <div class="viewer-actions">
+                            <button id="compareBtn" class="btn-action" style="display: none;">🔄 Compare</button>
                             <button id="downloadBtn" class="btn-action" style="display: none;">⬇️ Download</button>
                             <button id="closeBtn" class="btn-action" style="display: none;">✖️ Close</button>
                         </div>
@@ -57,6 +69,50 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Modal -->
+    <div id="compareModal" class="modal" style="display: none;">
+        <div class="modal-content compare-modal">
+            <div class="modal-header">
+                <h2>🔄 Compare Files</h2>
+                <button class="modal-close" onclick="closeCompareModal()">✖️</button>
+            </div>
+            <div class="modal-body">
+                <div class="compare-container">
+                    <div class="compare-pane">
+                        <h3>File 1: <span id="compareFile1Name"></span></h3>
+                        <div id="compareFile1Content" class="compare-content"></div>
+                    </div>
+                    <div class="compare-pane">
+                        <h3>File 2: Select a file to compare</h3>
+                        <div id="compareFile2Content" class="compare-content">
+                            <div class="empty-state">Select another file from the file list</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Sidebar -->
+    <div id="historySidebar" class="history-sidebar" style="display: none;">
+        <div class="history-header">
+            <h3>📜 Navigation History</h3>
+            <button class="history-close" onclick="closeHistorySidebar()">✖️</button>
+        </div>
+        <div class="history-tabs">
+            <button class="history-tab active" data-tab="recent">Recent Files</button>
+            <button class="history-tab" data-tab="history">Path History</button>
+        </div>
+        <div class="history-content">
+            <div id="recentFilesTab" class="history-tab-content active">
+                <ul id="recentFilesList" class="history-list"></ul>
+            </div>
+            <div id="pathHistoryTab" class="history-tab-content">
+                <ul id="pathHistoryList" class="history-list"></ul>
             </div>
         </div>
     </div>

@@ -6,6 +6,14 @@ let pollingInterval = null;
 let lastSnapshot = null;
 const POLL_INTERVAL = 3600000; // Check every 1 hour (3600000 ms)
 
+// New features state
+let allFiles = []; // For search
+let compareFile1 = null;
+let compareFile2 = null;
+let recentFiles = JSON.parse(localStorage.getItem('recentFiles') || '[]');
+let pathHistory = JSON.parse(localStorage.getItem('pathHistory') || '[]');
+let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
 // DOM elements
 const fileList = document.getElementById('fileList');
 const breadcrumb = document.getElementById('breadcrumb');
@@ -24,8 +32,25 @@ const debugMessages = document.getElementById('debugMessages');
 const toggleConsoleBtn = document.getElementById('toggleConsole');
 const clearConsoleBtn = document.getElementById('clearConsole');
 
+// New feature DOM elements
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearch');
+const searchResults = document.getElementById('searchResults');
+const compareBtn = document.getElementById('compareBtn');
+const compareModal = document.getElementById('compareModal');
+const themeToggle = document.getElementById('themeToggle');
+const historyToggle = document.getElementById('historyToggle');
+const historySidebar = document.getElementById('historySidebar');
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // Apply dark mode if enabled
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        themeToggle.textContent = '☀️ Light Mode';
+        themeToggle.classList.add('active');
+    }
+    
     loadDirectory('');
     
     refreshBtn.addEventListener('click', () => {
@@ -52,14 +77,38 @@ document.addEventListener('DOMContentLoaded', () => {
         requestNotificationPermission();
     }
     
+    // Initialize new features
+    initSearch();
+    initComparison();
+    initDarkMode();
+    initHistory();
+    
     // Initialize debug console
     initDebugConsole();
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.path !== undefined) {
+            loadDirectory(event.state.path, false);
+        }
+    });
+    
+    // Set initial history state
+    history.replaceState({ path: currentPath }, '', `#${currentPath}`);
 });
 
 // Load directory contents
-async function loadDirectory(path) {
+async function loadDirectory(path, pushState = true) {
     currentPath = path;
     updateBreadcrumb(path);
+    
+    // Add to path history
+    addToPathHistory(path);
+    
+    // Update browser history
+    if (pushState) {
+        history.pushState({ path: path }, '', `#${path}`);
+    }
     
     try {
         loading.style.display = 'block';
@@ -80,7 +129,8 @@ async function loadDirectory(path) {
             throw new Error(data.errors[0]?.message || 'Failed to load directory');
         }
         
-        renderFileList(data.children || []);
+        allFiles = data.children || [];
+        renderFileList(allFiles);
         
         // Capture snapshot if notifications are enabled
         if (notificationsEnabled) {
@@ -191,9 +241,13 @@ function updateBreadcrumb(path) {
 async function viewFile(path, name, event) {
     currentFile = { path, name };
     
+    // Add to recent files
+    addToRecentFiles(path, name);
+    
     try {
         viewerTitle.textContent = `📄 ${name}`;
         downloadBtn.style.display = 'inline-block';
+        compareBtn.style.display = 'inline-block';
         closeBtn.style.display = 'inline-block';
         
         contentArea.innerHTML = '<div class="loading">Loading file...</div>';
@@ -205,6 +259,7 @@ async function viewFile(path, name, event) {
         }
         
         const content = await response.text();
+        currentFile.content = content; // Store content for comparison
         
         // Highlight active file in list
         document.querySelectorAll('.file-item').forEach(item => {
@@ -579,6 +634,7 @@ function closeViewer() {
     currentFile = null;
     viewerTitle.textContent = 'Content Viewer';
     downloadBtn.style.display = 'none';
+    compareBtn.style.display = 'none';
     closeBtn.style.display = 'none';
     contentArea.innerHTML = '<div class="empty-state"><p>👈 Select a file to view its contents</p></div>';
     
@@ -864,6 +920,315 @@ function notifyChanges(changes) {
     
     // Auto-close after 10 seconds
     setTimeout(() => notification.close(), 10000);
+}
+
+// ===== SEARCH FUNCTIONALITY =====
+
+function initSearch() {
+    searchInput.addEventListener('input', handleSearch);
+    clearSearchBtn.addEventListener('click', clearSearch);
+}
+
+function handleSearch(e) {
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (query === '') {
+        clearSearch();
+        return;
+    }
+    
+    clearSearchBtn.style.display = 'inline-block';
+    
+    // Filter files
+    const filtered = allFiles.filter(item => 
+        item.uri.toLowerCase().includes(query)
+    );
+    
+    searchResults.style.display = 'block';
+    searchResults.textContent = `Found ${filtered.length} result(s)`;
+    
+    renderFileList(filtered);
+    
+    logToDebugConsole('info', `Search: "${query}" - ${filtered.length} results`);
+}
+
+function clearSearch() {
+    searchInput.value = '';
+    clearSearchBtn.style.display = 'none';
+    searchResults.style.display = 'none';
+    renderFileList(allFiles);
+}
+
+// ===== VERSION COMPARISON =====
+
+function initComparison() {
+    compareBtn.addEventListener('click', startComparison);
+}
+
+function startComparison() {
+    if (!currentFile) return;
+    
+    compareFile1 = { ...currentFile };
+    compareModal.style.display = 'flex';
+    
+    document.getElementById('compareFile1Name').textContent = compareFile1.name;
+    document.getElementById('compareFile1Content').textContent = compareFile1.content || 'Loading...';
+    
+    logToDebugConsole('info', `Starting comparison with: ${compareFile1.name}`);
+    
+    // Add event listeners to file items for selection
+    document.querySelectorAll('.file-item').forEach(item => {
+        const originalClick = item.onclick;
+        item.addEventListener('click', async function comparisonClickHandler(e) {
+            if (compareModal.style.display === 'flex' && !compareFile2) {
+                e.stopPropagation();
+                const fileName = this.querySelector('.file-name').textContent;
+                const filePath = currentPath + '/' + fileName;
+                
+                // Load the second file
+                try {
+                    const response = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
+                    if (!response.ok) throw new Error('Failed to load file');
+                    const content = await response.text();
+                    
+                    compareFile2 = { path: filePath, name: fileName, content };
+                    document.querySelector('.compare-pane:last-child h3').textContent = `File 2: ${fileName}`;
+                    
+                    // Show comparison
+                    performComparison();
+                } catch (error) {
+                    logToDebugConsole('error', `Failed to load comparison file: ${error.message}`);
+                }
+                
+                // Remove this handler
+                item.removeEventListener('click', comparisonClickHandler);
+            }
+        });
+    });
+}
+
+function performComparison() {
+    if (!compareFile1 || !compareFile2) return;
+    
+    const lines1 = compareFile1.content.split('\n');
+    const lines2 = compareFile2.content.split('\n');
+    
+    const content2 = document.getElementById('compareFile2Content');
+    content2.innerHTML = '';
+    
+    // Simple line-by-line comparison
+    const maxLines = Math.max(lines1.length, lines2.length);
+    
+    let diff1Html = '';
+    let diff2Html = '';
+    
+    for (let i = 0; i < maxLines; i++) {
+        const line1 = lines1[i] || '';
+        const line2 = lines2[i] || '';
+        
+        if (line1 !== line2) {
+            if (line1) {
+                diff1Html += `<div class="compare-line removed">${escapeHtml(line1) || '&nbsp;'}</div>`;
+            }
+            if (line2) {
+                diff2Html += `<div class="compare-line added">${escapeHtml(line2) || '&nbsp;'}</div>`;
+            }
+        } else {
+            diff1Html += `<div class="compare-line">${escapeHtml(line1) || '&nbsp;'}</div>`;
+            diff2Html += `<div class="compare-line">${escapeHtml(line2) || '&nbsp;'}</div>`;
+        }
+    }
+    
+    document.getElementById('compareFile1Content').innerHTML = diff1Html;
+    document.getElementById('compareFile2Content').innerHTML = diff2Html;
+    
+    logToDebugConsole('success', `Comparison complete: ${compareFile1.name} vs ${compareFile2.name}`);
+}
+
+function closeCompareModal() {
+    compareModal.style.display = 'none';
+    compareFile1 = null;
+    compareFile2 = null;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make closeCompareModal global for onclick
+window.closeCompareModal = closeCompareModal;
+
+// ===== DARK MODE =====
+
+function initDarkMode() {
+    themeToggle.addEventListener('click', toggleDarkMode);
+}
+
+function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    document.body.classList.toggle('dark-mode');
+    
+    if (isDarkMode) {
+        themeToggle.textContent = '☀️ Light Mode';
+        themeToggle.classList.add('active');
+        localStorage.setItem('darkMode', 'true');
+        logToDebugConsole('info', 'Dark mode enabled');
+    } else {
+        themeToggle.textContent = '🌙 Dark Mode';
+        themeToggle.classList.remove('active');
+        localStorage.setItem('darkMode', 'false');
+        logToDebugConsole('info', 'Dark mode disabled');
+    }
+}
+
+// ===== NAVIGATION HISTORY =====
+
+function initHistory() {
+    historyToggle.addEventListener('click', toggleHistorySidebar);
+    
+    // Setup tabs
+    document.querySelectorAll('.history-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchHistoryTab(tabName);
+        });
+    });
+    
+    updateHistoryDisplay();
+}
+
+function toggleHistorySidebar() {
+    if (historySidebar.style.display === 'none' || !historySidebar.style.display) {
+        historySidebar.style.display = 'flex';
+        historyToggle.classList.add('active');
+        updateHistoryDisplay();
+    } else {
+        closeHistorySidebar();
+    }
+}
+
+function closeHistorySidebar() {
+    historySidebar.style.display = 'none';
+    historyToggle.classList.remove('active');
+}
+
+// Make closeHistorySidebar global for onclick
+window.closeHistorySidebar = closeHistorySidebar;
+
+function switchHistoryTab(tabName) {
+    document.querySelectorAll('.history-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        }
+    });
+    
+    document.querySelectorAll('.history-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    if (tabName === 'recent') {
+        document.getElementById('recentFilesTab').classList.add('active');
+    } else {
+        document.getElementById('pathHistoryTab').classList.add('active');
+    }
+}
+
+function addToRecentFiles(path, name) {
+    const item = {
+        path,
+        name,
+        timestamp: Date.now()
+    };
+    
+    // Remove duplicates
+    recentFiles = recentFiles.filter(f => f.path !== path);
+    
+    // Add to beginning
+    recentFiles.unshift(item);
+    
+    // Keep only last 20
+    recentFiles = recentFiles.slice(0, 20);
+    
+    localStorage.setItem('recentFiles', JSON.stringify(recentFiles));
+    updateHistoryDisplay();
+}
+
+function addToPathHistory(path) {
+    const item = {
+        path,
+        timestamp: Date.now()
+    };
+    
+    // Remove duplicates
+    pathHistory = pathHistory.filter(p => p.path !== path);
+    
+    // Add to beginning
+    pathHistory.unshift(item);
+    
+    // Keep only last 30
+    pathHistory = pathHistory.slice(0, 30);
+    
+    localStorage.setItem('pathHistory', JSON.stringify(pathHistory));
+    updateHistoryDisplay();
+}
+
+function updateHistoryDisplay() {
+    // Update recent files
+    const recentList = document.getElementById('recentFilesList');
+    recentList.innerHTML = '';
+    
+    if (recentFiles.length === 0) {
+        recentList.innerHTML = '<li class="history-item">No recent files</li>';
+    } else {
+        recentFiles.forEach(file => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `
+                <div class="history-item-name">${getFileIcon(file.name)} ${file.name}</div>
+                <div class="history-item-path">${file.path}</div>
+                <div class="history-item-time">${formatTimeAgo(file.timestamp)}</div>
+            `;
+            li.addEventListener('click', () => {
+                viewFile(file.path, file.name);
+                closeHistorySidebar();
+            });
+            recentList.appendChild(li);
+        });
+    }
+    
+    // Update path history
+    const pathList = document.getElementById('pathHistoryList');
+    pathList.innerHTML = '';
+    
+    if (pathHistory.length === 0) {
+        pathList.innerHTML = '<li class="history-item">No path history</li>';
+    } else {
+        pathHistory.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `
+                <div class="history-item-name">📁 ${item.path || 'Root'}</div>
+                <div class="history-item-time">${formatTimeAgo(item.timestamp)}</div>
+            `;
+            li.addEventListener('click', () => {
+                loadDirectory(item.path);
+                closeHistorySidebar();
+            });
+            pathList.appendChild(li);
+        });
+    }
+}
+
+function formatTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return `${Math.floor(seconds / 86400)} days ago`;
 }
 
 // ===== DEBUG CONSOLE FEATURES =====
