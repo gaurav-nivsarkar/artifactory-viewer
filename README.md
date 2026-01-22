@@ -1,6 +1,8 @@
 # Artifactory Repository Browser
 
-A convenient web interface to browse Artifactory repositories with inline markdown file viewing.
+A dedicated web interface to browse a specific Artifactory repository with inline markdown file viewing.
+
+**Note:** This project is configured for a single, specific Artifactory instance and repository path.
 
 ## Features
 
@@ -61,12 +63,14 @@ http://localhost:3000
 
 ## Configuration
 
-You can modify the Artifactory URL and repository path in `server.js`:
+This application is configured for a specific Artifactory instance. The Artifactory URL and repository path are set in `server.js`:
 
 ```javascript
 const ARTIFACTORY_BASE_URL = 'https://artifactory.persgroep.cloud';
 const REPO_PATH = '/artifactory/api/storage/advertising-libraries-ext/...';
 ```
+
+**This project is designed for this specific repository and is not intended to be a general-purpose Artifactory browser.**
 
 ## Authentication
 
