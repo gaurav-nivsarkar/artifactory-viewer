@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artifactory Browser</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Artifactory Repository Browser</h1>
+            <p class="subtitle">mobileadvertising-banner-advertising</p>
+            <div class="notification-controls">
+                <button id="notificationToggle" class="btn-notification" title="Enable change notifications">
+                    🔔 Enable Notifications
+                </button>
+                <span id="notificationStatus" class="notification-status"></span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Breadcrumb navigation -->
+            <nav class="breadcrumb" id="breadcrumb">
+                <span class="breadcrumb-item" data-path="">🏠 Root</span>
+            </nav>
+
+            <!-- Split view: File browser on left, content viewer on right -->
+            <div class="split-view">
+                <!-- File Browser -->
+                <div class="file-browser">
+                    <div class="browser-header">
+                        <h2>📁 Files</h2>
+                        <div class="header-actions">
+                            <span id="changeIndicator" class="change-indicator" style="display: none;">🔴 Changes detected</span>
+                            <button id="refreshBtn" class="btn-refresh" title="Refresh">🔄</button>
+                        </div>
+                    </div>
+                    <div id="loading" class="loading">Loading...</div>
+                    <div id="error" class="error" style="display: none;"></div>
+                    <ul id="fileList" class="file-list"></ul>
+                </div>
+
+                <!-- Content Viewer -->
+                <div class="content-viewer">
+                    <div class="viewer-header">
+                        <h2 id="viewerTitle">Content Viewer</h2>
+                        <div class="viewer-actions">
+                            <button id="downloadBtn" class="btn-action" style="display: none;">⬇️ Download</button>
+                            <button id="closeBtn" class="btn-action" style="display: none;">✖️ Close</button>
+                        </div>
+                    </div>
+                    <div id="contentArea" class="content-area">
+                        <div class="empty-state">
+                            <p>👈 Select a file to view its contents</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Console -->
+    <div id="debugConsole" class="debug-console collapsed">
+        <div class="debug-header">
+            <span class="debug-title">🐛 Developer Console</span>
+            <div class="debug-controls">
+                <button id="clearConsole" class="debug-btn" title="Clear console">🗑️ Clear</button>
+                <button id="toggleConsole" class="debug-btn" title="Toggle console">▼</button>
+            </div>
+        </div>
+        <div class="debug-content">
+            <div id="debugMessages" class="debug-messages">
+                <div class="debug-message info">Console initialized. JavaScript errors will appear here.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
