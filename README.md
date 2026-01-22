@@ -23,19 +23,55 @@ A dedicated web interface to browse a specific Artifactory repository with inlin
 
 ## Installation
 
+### Option 1: Pull from GitHub Container Registry (Easiest)
+
+The Docker image is automatically built and published to GitHub Container Registry.
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer:latest
+
+# Run the container
+docker run -d -p 3000:3000 --name artifactory-viewer ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer:latest
+```
+
+Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username.
+
+### Option 2: Build Docker Image Locally
+
+1. Build the Docker image:
+```bash
+docker build -t artifactory-viewer .
+```
+
+2. Run the container:
+```bash
+docker run -d -p 3000:3000 --name artifactory-viewer artifactory-viewer
+```
+
+Or use Docker Compose:
+```bash
+docker-compose up -d
+```
+
+3. Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+### Option 3: Local Development
+
 1. Install dependencies:
 ```bash
 npm install
 ```
 
-## Usage
-
-1. Start the server:
+2. Start the server:
 ```bash
 npm start
 ```
 
-2. Open your browser and navigate to:
+3. Open your browser and navigate to:
 ```
 http://localhost:3000
 ```
@@ -91,6 +127,74 @@ const response = await axios.get(fullPath, {
 - **Markdown Rendering**: marked.js
 - **Backend**: Node.js, Express
 - **HTTP Client**: Axios
+
+## Docker Deployment
+
+### Automatic Builds
+
+This repository uses GitHub Actions to automatically build and publish Docker images to GitHub Container Registry on every push to the main branch.
+
+- **Image Location**: `ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer`
+- **Tags**: `latest`, version tags (if you use git tags like `v1.0.0`), and commit SHA
+
+### Pulling from GitHub Container Registry
+
+```bash
+# Pull and run the latest version
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer:latest
+docker run -d -p 3000:3000 ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer:latest
+```
+
+### Building for Internal Registry
+
+To push to your company's container registry:
+
+```bash
+# Pull from GitHub
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer:latest
+
+# Tag for your internal registry
+docker tag ghcr.io/YOUR_GITHUB_USERNAME/artifactory-viewer:latest registry.persgroep.cloud/artifactory-viewer:latest
+
+# Push to internal registry
+docker push registry.persgroep.cloud/artifactory-viewer:latest
+```
+
+### Kubernetes Deployment (Example)
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artifactory-viewer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: artifactory-viewer
+  template:
+    metadata:
+      labels:
+        app: artifactory-viewer
+    spec:
+      containers:
+      - name: artifactory-viewer
+        image: registry.persgroep.cloud/artifactory-viewer:latest
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: artifactory-viewer
+spec:
+  selector:
+    app: artifactory-viewer
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: LoadBalancer
+```
 
 ## Browser Support
 

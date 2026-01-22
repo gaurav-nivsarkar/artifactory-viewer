@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  artifactory-viewer:
+    build: .
+    container_name: artifactory-viewer
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    # Uncomment if you want to use environment variables for configuration
+    # environment:
+    #   - ARTIFACTORY_BASE_URL=https://artifactory.persgroep.cloud
+    #   - PORT=3000
